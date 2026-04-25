@@ -1,0 +1,40 @@
+name: Upload file from URL to repo
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: 'Direct URL of the file to download'
+        required: true
+        type: string
+      filename:
+        description: 'Name to save the file as (e.g., paper.pdf)'
+        required: true
+        type: string
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download file with browser user-agent
+        run: |
+          curl -L --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -o "${{ inputs.filename }}" "${{ inputs.file_url }}"
+
+      - name: Verify file is PDF (or show what we got)
+        run: |
+          echo "First 20 bytes of downloaded file:"
+          xxd -l 20 "${{ inputs.filename }}" || true
+          echo "File command output:"
+          file "${{ inputs.filename }}" || true
+
+      - name: Commit and push if PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.filename }}"
+          git commit -m "Add file from URL: ${{ inputs.file_url }}" || echo "No changes"
+          git push
